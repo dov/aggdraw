@@ -134,6 +134,9 @@ typedef struct {
     PyObject_HEAD
     agg::rgba8 color;
     float width;
+    agg::line_join_e line_join;
+    agg::line_cap_e line_cap;
+    float miter_limit;
 } PenObject;
 
 static void pen_dealloc(PenObject* self);
@@ -335,10 +338,6 @@ public:
             /* interior */
             agg::conv_contour<agg::path_storage> contour(*p);
             contour.auto_detect_orientation(true);
-            if (pen)
-                contour.width(pen->width / 2.0);
-            else
-                contour.width(0.5);
             rasterizer.reset();
             rasterizer.add_path(contour);
             renderer.color(brush->color);
@@ -349,8 +348,9 @@ public:
             /* outline */
             /* FIXME: add path for dashed lines */
             agg::conv_stroke<agg::path_storage> stroke(*p);
-            stroke.line_join(agg::round_join);
-            stroke.line_cap(agg::round_cap);
+            stroke.line_join(pen->line_join);
+            stroke.line_cap(pen->line_cap);
+            stroke.miter_limit(pen->miter_limit);
             stroke.width(pen->width);
             rasterizer.reset();
             rasterizer.add_path(stroke);
@@ -1341,10 +1341,14 @@ pen_new(PyObject* self_, PyObject* args, PyObject* kw)
 
     PyObject* color;
     float width = 1.0;
+    agg::line_join_e line_join = agg::round_join;
+    agg::line_cap_e line_cap = agg::round_cap;
+    float miter_limit = 4.0; // Like default in agg_math_stroke.h
     int opacity = 255;
-    static char* kwlist[] = { (char*)"color", (char*)"width", (char*)"opacity", NULL };
-    if (!PyArg_ParseTupleAndKeywords(args, kw, (char*)"O|fi:Pen", kwlist,
-                                     &color, &width, &opacity))
+    static const char* kwlist[] = { "color", "width", "opacity", "linejoin", "linecap", "miterlimit", NULL };
+    if (!PyArg_ParseTupleAndKeywords(args, kw, (char*)"O|fiiif:Pen", (char**)kwlist,
+                                     &color, &width, &opacity,
+                                     &line_join,&line_cap,&miter_limit))
         return NULL;
 
     self = PyObject_NEW(PenObject, &PenType);
@@ -1354,6 +1358,9 @@ pen_new(PyObject* self_, PyObject* args, PyObject* kw)
 
     self->color = getcolor(color, opacity);
     self->width = width;
+    self->line_join = line_join;
+    self->line_cap = line_cap;
+    self->miter_limit = miter_limit;
 
     return (PyObject*) self;
 }
