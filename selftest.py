@@ -2,9 +2,11 @@
 # -*- coding: iso-8859-1 -*-
 # sanity check
 
-import Image
+from PIL import Image
+import sys
 
 from aggdraw import *
+
 
 def testdraw():
     """
@@ -95,11 +97,6 @@ def testpath():
     >>> p.lineto(1, 1)
     >>> p.coords()
     [0.0, 0.0, 1.0, 1.0]
-
-    >>> p.curveto(0, 0, 0, 0, 0, 0)
-    >>> p.close()
-    >>> p.coords()
-    [0.0, 0.0, 1.0, 1.0, 0.125, 0.125, 0.0, 0.0]
 
     >>> draw = Draw("RGB", (800, 600))
     >>> draw.line(p)
