@@ -280,7 +280,6 @@ public:
     draw_adaptor(DrawObject* self_, const char* mode_) 
     {
         self = self_;
-        Py_INCREF(self);
         if (mode)
             free(mode);
         mode = strdup(mode_);
@@ -288,10 +287,6 @@ public:
         setantialias(true);
 
         rasterizer.clip_box(0,0, self->xsize, self->ysize);
-    }
-    ~draw_adaptor()
-    {
-      Py_DECREF(self);
     }
 
     void setantialias(bool flag)
