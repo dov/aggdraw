@@ -15,7 +15,7 @@
 from distutils.core import setup, Extension
 import os, sys
 
-VERSION = "1.3-dov-alpha"
+VERSION = "1.3-dov-a1"
 
 SUMMARY="High quality drawing interface for PIL."
 

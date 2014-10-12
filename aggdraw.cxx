@@ -38,7 +38,7 @@
  * Copyright (c) 2003-2006 by Secret Labs AB
  */
 
-#define VERSION "1.3a1"
+#define VERSION "1.3-dov-a1"
 
 #if defined(_MSC_VER)
 #define WINDOWS_LEAN_AND_MEAN
