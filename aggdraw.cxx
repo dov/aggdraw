@@ -33,11 +33,12 @@
  * 2005-10-20 fl   added clear method
  * 2005-10-23 fl   support either hdc or hwnd in expose
  * 2006-02-12 fl   fixed crashes in type(obj) and path constructor
+ * 2014-07-28 dg   Updated to agg-2.44
  *
  * Copyright (c) 2003-2006 by Secret Labs AB
  */
 
-#define VERSION "1.2a3"
+#define VERSION "1.3a1"
 
 #if defined(_MSC_VER)
 #define WINDOWS_LEAN_AND_MEAN
@@ -1933,6 +1934,7 @@ initaggdraw(void)
     PyObject* g = PyDict_New();
 
     PyDict_SetItemString(g, "__builtins__", PyEval_GetBuiltins());
+    PyType_Ready(&PenType);
 
     PyRun_String(
 
