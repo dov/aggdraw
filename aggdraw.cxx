@@ -36,6 +36,7 @@
  * 2014-07-28 dg   Updated to agg-2.44
  *
  * Copyright (c) 2003-2006 by Secret Labs AB
+ * Copyright (c) 2014-2016 by Dov Grobgeld
  */
 
 #define VERSION "1.3-dov-a1"
@@ -579,7 +580,7 @@ draw_new(PyObject* self_, PyObject* args)
 
     self->image = image;
     if (image) {
-      PyObject* buffer = PyObject_CallMethod(image, (char*)"tostring", NULL);
+      PyObject* buffer = PyObject_CallMethod(image, (char*)"tobytes", NULL);
         if (!buffer)
             return NULL; /* FIXME: release resources */
         if (!PyString_Check(buffer)) {
