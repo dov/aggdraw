@@ -1142,10 +1142,10 @@ draw_settransform(DrawObject* self, PyObject* args)
 }
 
 static PyObject*
-draw_fromstring(DrawObject* self, PyObject* args)
+draw_frombytes(DrawObject* self, PyObject* args)
 {
     char* data = NULL; int data_size;
-    if (!PyArg_ParseTuple(args, "s#:fromstring", &data, &data_size))
+    if (!PyArg_ParseTuple(args, "s#:frombytes", &data, &data_size))
         return NULL;
 
     if (data_size >= self->buffer_size)
@@ -1160,7 +1160,7 @@ draw_fromstring(DrawObject* self, PyObject* args)
 }
 
 static PyObject*
-draw_tostring(DrawObject* self, PyObject* args)
+draw_tobytes(DrawObject* self, PyObject* args)
 {
     if (!PyArg_ParseTuple(args, ":tostring"))
         return NULL;
@@ -1243,11 +1243,11 @@ draw_flush(DrawObject* self, PyObject* args)
         return Py_None;
     }
 
-    PyObject* buffer = draw_tostring(self, args);
+    PyObject* buffer = draw_tobytes(self, args);
     if (!buffer)
         return NULL;
 
-    result = PyObject_CallMethod(self->image, (char*)"fromstring", (char*)"N", buffer);
+    result = PyObject_CallMethod(self->image, (char*)"frombytes", (char*)"N", buffer);
     if (!result)
         return NULL;
 
@@ -1287,8 +1287,8 @@ static PyMethodDef draw_methods[] = {
 
     {"clear", (PyCFunction) draw_clear, METH_VARARGS},
 
-    {"fromstring", (PyCFunction) draw_fromstring, METH_VARARGS},
-    {"tostring", (PyCFunction) draw_tostring, METH_VARARGS},
+    {"frombytes", (PyCFunction) draw_frombytes, METH_VARARGS},
+    {"tobytes", (PyCFunction) draw_tobytes, METH_VARARGS},
 
     {NULL, NULL}
 };
@@ -1886,19 +1886,53 @@ path_dealloc(PathObject* self)
 
 static PyMethodDef path_methods[] = {
 
-  {(char*)"lineto", (PyCFunction) path_lineto, METH_VARARGS},
-  {(char*)"rlineto", (PyCFunction) path_rlineto, METH_VARARGS},
-  {(char*)"curveto", (PyCFunction) path_curveto, METH_VARARGS},
-  {(char*)"rcurveto", (PyCFunction) path_rcurveto, METH_VARARGS},
-  {(char*)"moveto", (PyCFunction) path_moveto, METH_VARARGS},
-  {(char*)"rmoveto", (PyCFunction) path_rmoveto, METH_VARARGS},
+  {(char*)"lineto", (PyCFunction) path_lineto, METH_VARARGS,
+   "lineto - draw a line to a point\n"
+   "\n"
+   "Arguments:\n"
+   "x,y  - Coordinates\n"
+  },
+  {(char*)"rlineto", (PyCFunction) path_rlineto, METH_VARARGS,
+  "relative line to a point\n"
+   "\n"
+   "Arguments:\n"
+   "x,y  - Coordinates\n"
+  },
+  {(char*)"curveto", (PyCFunction) path_curveto, METH_VARARGS,
+   "Bezier curveto to a point\n"
+   "Arguments:\n"
+   "px1,py1,px2,py2,x,y  - Coordinates\n"
+  },
+  {(char*)"rcurveto", (PyCFunction) path_rcurveto, METH_VARARGS,
+   "Bezier relative curveto to a point\n"
+   "Arguments:\n"
+   "px1,py1,px2,py2,x,y  - Coordinates\n"
+  },
+  {(char*)"moveto", (PyCFunction) path_moveto, METH_VARARGS,
+   "moveto - draw a line to a point\n"
+   "\n"
+   "Arguments:\n"
+   "x,y  - Coordinates\n"
+  },
+  {(char*)"rmoveto", (PyCFunction) path_rmoveto, METH_VARARGS,
+   "rmoveto - draw a line to a point\n"
+   "\n"
+   "Arguments:\n"
+   "x,y  - Relative Coordinates\n"
+  },
+  {(char*)"close", (PyCFunction) path_close, METH_VARARGS,
+   "close the path"
+  },
+  {(char*)"polygon", (PyCFunction) path_polygon, METH_VARARGS,
+   "polygon - add a polygon from a list of points\n"
+   "\n"
+   "Arguments:\n"
+   "coords - An interlaced list of x,y coordinates\n"
+  },
 
-  {(char*)"close", (PyCFunction) path_close, METH_VARARGS},
-
-  {(char*)"polygon", (PyCFunction) path_polygon, METH_VARARGS},
-
-  {(char*)"coords", (PyCFunction) path_coords, METH_VARARGS},
-
+  {(char*)"coords", (PyCFunction) path_coords, METH_VARARGS,
+  "coords - ??"
+  },
     {NULL, NULL}
 };
 
@@ -1911,12 +1945,55 @@ path_getattr(PathObject* self, char* name)
 /* -------------------------------------------------------------------- */
 
 static PyMethodDef aggdraw_functions[] = {
-  {(char*)"Pen", (PyCFunction) pen_new, METH_VARARGS|METH_KEYWORDS},
-  {(char*)"Brush", (PyCFunction) brush_new, METH_VARARGS|METH_KEYWORDS},
-  {(char*)"Font", (PyCFunction) font_new, METH_VARARGS|METH_KEYWORDS},
-  {(char*)"Symbol", (PyCFunction) symbol_new, METH_VARARGS},
-  {(char*)"Path", (PyCFunction) path_new, METH_VARARGS},
-  {(char*)"Draw", (PyCFunction) draw_new, METH_VARARGS},
+  {(char*)"Pen", (PyCFunction) pen_new, METH_VARARGS|METH_KEYWORDS,
+   "Create a new Pen.\n"
+   "\n"
+   "Keyword arguments:\n"
+   "color -- Color of the pen. Either an 8-bit gray level or a color name\n"
+   "width -- Width of pen. May be a floating point number\n"
+   "opacity -- An 8-bit opacity value\n"
+   "linejoin -- Type of line_join. Agg line join value\n"
+   "linecap  -- Agg line cap value\n"
+   "miterlimit -- Agg miterlimit\n"
+  },
+  {(char*)"Brush", (PyCFunction) brush_new, METH_VARARGS|METH_KEYWORDS,
+   "Create a new Brush used for filling\n"
+   "\n"
+   "\n"
+   "Keyword arguments:\n"
+   "color -- Color of the brush\n"
+   "opacity -- Opacity as an 8-bit integer\n"
+  },
+  {(char*)"Font", (PyCFunction) font_new, METH_VARARGS|METH_KEYWORDS,
+   "Create a new font\n"
+   "\n"
+   "Keyword arguments:\n"
+   "color -- Color of font\n"
+   "file -- Path to ttf font file\n"
+   "size -- Size of font\n"
+   "opacity -- Opacity as an 8-bit value\n"
+  },
+  {(char*)"Symbol", (PyCFunction) symbol_new, METH_VARARGS,
+   "Create a path from an svg path string\n"
+   "\n"
+   "Arguments\n"
+   "path -- A svg d-path string\n"
+   "scale -- Scaling\n"
+  },
+  {(char*)"Path", (PyCFunction) path_new, METH_VARARGS,
+   "Create a new path object\n"
+   "\n"
+   "The path objects methods may be used for building the path\n"
+   "\n"
+   "Optional arguments\n"
+   "xy -- An interlaced list of initial x,y values\n"
+  },
+  {(char*)"Draw", (PyCFunction) draw_new, METH_VARARGS,
+   "Creates an object that can be used to draw in the given image\n"
+   "\n"
+   "Arguments:\n"
+   "image -- The PIL image instance to draw on\n"
+  },
 #if defined(WIN32)
   {(char*)"Dib", (PyCFunction) draw_dib, METH_VARARGS},
 #endif
@@ -1929,6 +2006,7 @@ initaggdraw(void)
 {
     DrawType.ob_type = PathType.ob_type = &PyType_Type;
     PenType.ob_type = BrushType.ob_type = FontType.ob_type = &PyType_Type;
+
 
     Py_InitModule("aggdraw", aggdraw_functions);
 
