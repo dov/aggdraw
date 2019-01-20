@@ -2,6 +2,12 @@
 The aggdraw module
 ==================
 
+.. image:: https://travis-ci.org/pytroll/aggdraw.svg?branch=master
+    :target: https://travis-ci.org/pytroll/aggdraw
+
+.. image:: https://ci.appveyor.com/api/projects/status/9g7qt1kitwxya7u4/branch/master?svg=true
+    :target: https://ci.appveyor.com/project/pytroll/aggdraw/branch/master
+
 ----------------------------------------------------------------------
 agg 2.4 notes
 ----------------------------------------------------------------------
@@ -19,14 +25,10 @@ Anti-Grain Geometry library (from http://antigrain.com).
 
 The necessary AGG sources are included in the aggdraw source kit.
 
-Enjoy /F
+For posterity, reference `the old documentation <http://www.effbot.org/zone/aggdraw.htm>`_.
 
-fredrik@pythonware.com
-http://www.pythonware.com
-
---------------------------------------------------------------------
 Build instructions (all platforms)
---------------------------------------------------------------------
+----------------------------------
 
 1. Check prerequisites.
 
@@ -36,27 +38,23 @@ Build instructions (all platforms)
 
    The following additional libraries can be used:
 
-   OpenType/TrueType    freetype2 (2.1.10 or later is recommended)
-   support              
-                        http://www.freetype.org
-                        http://freetype.sourceforge.net  
+   * OpenType/TrueType support - freetype2 (2.1.10 or later is recommended)
+     See http://www.freetype.org and http://freetype.sourceforge.net for details.
 
 2. Configure.
 
-   To enable freetype, you need to build the library somewhere, and
-   then change the FREETYPE_ROOT variable in aggdraw's setup.py file
-   so it points to the build location.
-
-   If you don't want or need freetype support, you can leave the
-   variable as is, or set it to None.
+   To enable freetype, you need to build the library somewhere and
+   make sure the `freetype-config` command is available on your PATH. The
+   setup.py file will call `freetype-config --prefix` to locate
+   all of the necessary libraries and headers.
 
 3. Build.
 
    The library uses a standard setup.py file, and you can use all
-   standard setup.py commands.   I recommend the following steps:
+   standard setup.py commands.   I recommend the following steps::
 
         $ python setup.py build_ext -i
-	$ python selftest.py
+        $ python selftest.py
 
    (if you're lazy, you can skip the above and just install the
    library; setup.py will make sure the right stuff is built before
@@ -64,28 +62,29 @@ Build instructions (all platforms)
 
 4. Install.
 
-   If the selftest succeeds, you can install the library:
+   If the selftest succeeds, you can install the library::
 
         $ python setup.py install
 
 5. Enjoy!
 
---------------------------------------------------------------------
-License
---------------------------------------------------------------------
+AGG2 License
+------------
 
-Anti-Grain Geometry - Version 2.0 
-Copyright (c) 2002 Maxim Shemanarev (McSeem) 
+Anti-Grain Geometry - Version 2.0
+Copyright (c) 2002 Maxim Shemanarev (McSeem)
 
-Permission to copy, use, modify, sell and distribute this software 
-is granted provided this copyright notice appears in all copies. 
+Permission to copy, use, modify, sell and distribute this software
+is granted provided this copyright notice appears in all copies.
 This software is provided "as is" without express or implied
 warranty, and with no claim as to its suitability for any purpose.
 
---------------------------------------------------------------------
+AggDraw License
+---------------
 
 The aggdraw interface, and associated modules and documentation are:
 
+Copyright (c) 2011-2017 by AGGDraw Developers
 Copyright (c) 2003-2006 by Secret Labs AB
 Copyright (c) 2003-2006 by Fredrik Lundh
 
@@ -109,5 +108,3 @@ ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
 WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
 OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
---------------------------------------------------------------------

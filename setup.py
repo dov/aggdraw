@@ -1,6 +1,6 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #
-# $Id: /work/modules/aggdraw/setup.py 1180 2006-02-12T14:24:26.234348Z Fredrik  $
 # Setup script for aggdraw
 #
 # Usage:
@@ -11,13 +11,19 @@
 #   To build and install:
 #   $ python setup.py install
 #
+from __future__ import print_function
+import os
+import sys
+import subprocess
 
-from distutils.core import setup, Extension
-import os, sys
+try:
+    from setuptools import setup, Extension
+except ImportError:
+    from distutils.core import setup, Extension
 
-VERSION = "1.3-dov-a1"
+VERSION = "1.3.9"
 
-SUMMARY="High quality drawing interface for PIL."
+SUMMARY = "High quality drawing interface for PIL."
 
 DESCRIPTION = """\
 
@@ -28,12 +34,61 @@ with the WCK renderer.
 
 """
 
-# pointer to freetype build directory (tweak as necessary)
-FREETYPE_ROOT = "/usr/"
 
-if not os.path.isdir(FREETYPE_ROOT):
-    print "===", "freetype not available (edit setup.py to enable)"
-    FREETYPE_ROOT = None
+def _get_freetype_config():
+    print("Trying freetype-config to find freetype library...")
+    try:
+        # pointer to freetype build directory (tweak as necessary)
+        return subprocess.check_output(
+            ['freetype-config', '--prefix']).strip().replace(
+            b'"', b'').decode()
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
+def _get_freetype_with_ctypes():
+    print("Using ctypes to find freetype library...")
+    from ctypes.util import find_library
+    ft_lib_path = find_library('freetype')
+    if ft_lib_path is None:
+        return None
+
+    if not sys.platform.startswith('linux') and \
+            not os.path.isfile(ft_lib_path):
+        return None
+    elif not os.path.isfile(ft_lib_path):
+        # try prefix since find_library doesn't give a full path on linux
+        for bdir in (sys.prefix, '/usr', '/usr/local'):
+            lib_path = os.path.join(bdir, 'lib', ft_lib_path)
+            if os.path.isfile(lib_path):
+                return bdir
+        else:
+            # freetype is somewhere on the system, but we don't know where
+            return None
+    ft_lib_path = os.path.dirname(ft_lib_path)
+    lib_path = os.path.realpath(os.path.join(ft_lib_path, '..'))
+    return lib_path
+
+
+def _get_freetype_with_pkgconfig():
+    print("Trying 'pkgconfig' to find freetype library...")
+    try:
+        import pkgconfig
+        return pkgconfig.variables('freetype2')['prefix']
+    except (ImportError, KeyError, ValueError):
+        return None
+
+
+FREETYPE_ROOT = os.getenv('AGGDRAW_FREETYPE_ROOT')
+for func in (_get_freetype_config, _get_freetype_with_ctypes,
+             _get_freetype_with_pkgconfig):
+    if FREETYPE_ROOT is None:
+        FREETYPE_ROOT = func()
+
+if FREETYPE_ROOT is None:
+    print("=== freetype not available")
+else:
+    print("=== freetype found: '{}'".format(FREETYPE_ROOT))
 
 sources = [
     # source code currently used by aggdraw
@@ -47,7 +102,8 @@ sources = [
     "agg/src/agg_vcgen_stroke.cpp",
     ]
 
-defines = []
+# define VERSION macro in C++ code, need to quote it
+defines = [('VERSION', VERSION)]
 
 include_dirs = ["agg/include"]
 library_dirs = []
@@ -61,6 +117,7 @@ if FREETYPE_ROOT:
         ])
     include_dirs.append("agg/font_freetype")
     include_dirs.append(os.path.join(FREETYPE_ROOT, "include"))
+    include_dirs.append(os.path.join(FREETYPE_ROOT, "include/freetype"))
     include_dirs.append(os.path.join(FREETYPE_ROOT, "include/freetype2"))
     library_dirs.append(os.path.join(FREETYPE_ROOT, "lib"))
     libraries.append("freetype")
@@ -68,18 +125,7 @@ if FREETYPE_ROOT:
 if sys.platform == "win32":
     libraries.extend(["kernel32", "user32", "gdi32"])
 
-try:
-    # add necessary to distutils (for backwards compatibility)
-    from distutils.dist import DistributionMetadata
-    DistributionMetadata.classifiers = None
-    DistributionMetadata.download_url = None
-    DistributionMetadata.platforms = None
-except:
-    pass
-
-
 setup(
-
     name="aggdraw",
     version=VERSION,
     author="Fredrik Lundh",
@@ -93,14 +139,15 @@ setup(
     download_url="http://www.effbot.org/downloads#aggdraw",
     license="Python (MIT style)",
     long_description=DESCRIPTION.strip(),
-    platforms="Python 2.1 and later.",
-    url="http://www.effbot.org/zone/aggdraw.htm",
-    ext_modules = [
+    platforms="Python 2.7 and later.",
+    url="https://github.com/pytroll/aggdraw",
+    ext_modules=[
         Extension("aggdraw", ["aggdraw.cxx"] + sources,
                   define_macros=defines,
                   include_dirs=include_dirs,
                   library_dirs=library_dirs, libraries=libraries
                   )
-        ]
-
+        ],
+    python_requires='>=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*',
+    tests_require=['pillow', 'pytest'],
     )
