@@ -110,21 +110,52 @@ else:
     print("=== freetype found: '{}'".format(FREETYPE_ROOT))
 
 sources = [
-    # source code currently used by aggdraw
-    # FIXME: link against AGG library instead?
-    "agg/src/agg_arc.cpp",
-    "agg/src/agg_bezier_arc.cpp",
-    "agg/src/agg_curves.cpp",
-    "agg/src/agg_trans_affine.cpp",
-    "agg/src/agg_vcgen_contour.cpp",
-    # "agg2/src/agg_vcgen_dash.cpp",
-    "agg/src/agg_vcgen_stroke.cpp",
+    # Reference all of svg. It's small enough so there is no reason
+    # to try to cherry pick sources.
+    './agg/src/agg_arc.cpp',
+    './agg/src/agg_arrowhead.cpp',
+    './agg/src/agg_bezier_arc.cpp',
+    './agg/src/agg_bspline.cpp',
+    './agg/src/agg_color_rgba.cpp',
+    './agg/src/agg_curves.cpp',
+    './agg/src/agg_embedded_raster_fonts.cpp',
+    './agg/src/agg_gsv_text.cpp',
+    './agg/src/agg_image_filters.cpp',
+    './agg/src/agg_line_aa_basics.cpp',
+    './agg/src/agg_line_profile_aa.cpp',
+    './agg/src/agg_rounded_rect.cpp',
+    './agg/src/agg_sqrt_tables.cpp',
+    './agg/src/agg_trans_affine.cpp',
+    './agg/src/agg_trans_double_path.cpp',
+    './agg/src/agg_trans_single_path.cpp',
+    './agg/src/agg_trans_warp_magnifier.cpp',
+    './agg/src/agg_vcgen_bspline.cpp',
+    './agg/src/agg_vcgen_contour.cpp',
+    './agg/src/agg_vcgen_dash.cpp',
+    './agg/src/agg_vcgen_markers_term.cpp',
+    './agg/src/agg_vcgen_smooth_poly1.cpp',
+    './agg/src/agg_vcgen_stroke.cpp',
+    './agg/src/agg_vpgen_clip_polygon.cpp',
+    './agg/src/agg_vpgen_clip_polyline.cpp',
+    './agg/src/agg_vpgen_segmentator.cpp',
+    './agg-svg/agg_svg_gradient.cpp',
+    './agg-svg/agg_svg_parser.cpp',
+    './agg-svg/agg_svg_path_renderer.cpp',
+    './agg-svg/agg_svg_path_tokenizer.cpp',
+    './expat/loadlibrary.c',
+    './expat/xmlparse.c',
+    './expat/xmlrole.c',
+    './expat/xmltok.c',
+    './expat/xmltok_impl.c',
+    './expat/xmltok_ns.c',
     ]
 
 # define VERSION macro in C++ code, need to quote it
 defines = [('VERSION', VERSION)]
 
-include_dirs = ["agg/include"]
+include_dirs = ["agg/include",
+                'agg-svg',
+                'expat']
 library_dirs = []
 
 libraries = []

@@ -96,6 +96,7 @@
 #include "agg_scanline_p.h"
 #include "agg_vcgen_stroke.h"
 #include "platform/agg_platform_support.h" // agg::pix_format_*
+#include "agg_svg_parser.h"
 
 /* -------------------------------------------------------------------- */
 /* AGG Drawing Surface */
@@ -209,6 +210,81 @@ static PyTypeObject PenType = {
 #endif
 
 #define Pen_Check(op) ((op) != NULL && Py_TYPE(op) == &PenType)
+
+typedef struct {
+    PyObject_HEAD
+    agg::svg::path_renderer *path;
+} SvgObject;
+
+static void svg_dealloc(SvgObject* self);
+
+const char *svg_bounding_rect_doc = "Return the bounding rect of an svg object.\n";
+
+static PyObject*
+svg_bounding_rect(SvgObject* self, PyObject* args)
+{
+    double x1,y1,x2,y2;
+
+    self->path->bounding_rect(&x1,&y1,&x2,&y2);
+    return Py_BuildValue("ffff", x1,y1,x2,y2);
+}
+
+static PyMethodDef svg_methods[] = {
+    {"bounding_rect", (PyCFunction) svg_bounding_rect, METH_VARARGS, svg_bounding_rect_doc},
+    {NULL, NULL}
+};
+
+#ifdef IS_PY3K
+
+static PyObject*  
+svg_getattro(SvgObject* self, PyObject* nameobj)
+{
+    return PyObject_GenericGetAttr((PyObject*)self, nameobj);
+}
+
+#else
+
+static PyObject*  
+svg_getattr(SvgObject* self, char* name)
+{
+    return Py_FindMethod(svg_methods, (PyObject*) self, name);
+}
+
+#endif
+
+#ifdef IS_PY3K
+static PyTypeObject SvgType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    "Svg", sizeof(SvgObject), 0,
+    /* methods */
+    (destructor) svg_dealloc, /* tp_dealloc */
+    0, /* tp_print */
+    0, /* tp_getattr */
+    0, /* tp_setattr */
+    0, /* tp_reserved */
+    0, /* tp_repr */
+    0, /* tp_as_number */
+    0, /* tp_as_sequence */
+    0, /* tp_as_mapping */
+    0, /* tp_hash*/
+    0, /* tp_call*/
+    0, /* tp_str*/
+    (getattrofunc)svg_getattro, /* tp_getattro */
+};
+
+#else
+static PyTypeObject SvgType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    "Svg", sizeof(SvgObject), 0,
+    /* methods */
+    (destructor) svg_dealloc, /* tp_dealloc */
+    0, /* tp_print */
+    (getattrfunc)svg_getattr, /* tp_getattr */
+    0, /* tp_setattr */
+};
+#endif
+
+#define Svg_Check(op) ((op) != NULL && Py_TYPE(op) == &SvgType)
 
 typedef struct {
     PyObject_HEAD
@@ -376,6 +452,8 @@ public:
     virtual void draw(agg::path_storage &path, PyObject* obj1,
                       PyObject* obj2=NULL) = 0;
     virtual void drawtext(float xy[2], PyObject* text, FontObject* font) {};
+    virtual void draw_svg(agg::svg::path_renderer* path,
+                          agg::trans_affine& mtx) {}
 };
 
 template<class PixFmt> class draw_adaptor : public draw_adaptor_base {
@@ -521,6 +599,18 @@ public:
         }
     }
 #endif
+    void draw_svg(agg::svg::path_renderer* path,
+                  agg::trans_affine& mtx)
+    {
+        PixFmt pf(*self->buffer);
+        renderer_base rb(pf);
+
+        agg::rect_i cb(0,0,1000,1000); // ??? TBDov figure out what this is!
+        agg::trans_affine t = mtx;
+        if (self->transform)
+            t = (*self->transform)*mtx;
+        path->render(rasterizer,scanline,rb,t,cb);
+    }
 };
 
 /* -------------------------------------------------------------------- */
@@ -1425,6 +1515,48 @@ draw_symbol(DrawObject* self, PyObject* args)
     return Py_None;
 }
 
+const char *draw_svg_doc = "Draw a svg object at the given positions (experimental).\n";
+
+static PyObject*
+draw_svg(DrawObject* self, PyObject* args)
+{
+    PyObject* transIn;
+    SvgObject* svg;
+    if (!PyArg_ParseTuple(args, "OO!|OO:symbol",
+                          &transIn, &SvgType, &svg))
+        return NULL;
+
+    // Either accept a 2-member position tuple
+    // or a 6-meber full affine transformation.
+    if (!PySequence_Check(transIn)) {
+        PyErr_SetString(PyExc_TypeError, "transformation must be a sequence");
+        return NULL;
+    }
+    
+    int n = PyObject_Length(transIn);
+    agg::trans_affine transform;
+    if (n==2) {
+        double x = GETFLOAT(PySequence_GetItem(transIn,0));
+        double y = GETFLOAT(PySequence_GetItem(transIn,1));
+        transform = agg::trans_affine_translation(x,y);
+    }
+    else if (n==6) {
+        double tt[6];
+        for (int i=0; i<6; i++)
+            tt[i] = GETFLOAT(PySequence_GetItem(transIn,i));
+        transform = agg::trans_affine(tt);
+    }
+    else {
+        PyErr_SetString(PyExc_TypeError, "Unsupported pos length");
+        return NULL;
+    }
+        
+    self->draw->draw_svg(svg->path, transform);
+
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
 #if defined(HAVE_FREETYPE2)
 
 const char *draw_text_doc = "Draws a text string at the given position, using the given font.\n"
@@ -1743,6 +1875,7 @@ static PyMethodDef draw_methods[] = {
 
     {"path", (PyCFunction) draw_path, METH_VARARGS, draw_path_doc},
     {"symbol", (PyCFunction) draw_symbol, METH_VARARGS, draw_symbol_doc},
+    {"svg", (PyCFunction) draw_svg, METH_VARARGS, draw_svg_doc},
 
     {"arc", (PyCFunction) draw_arc, METH_VARARGS, draw_arc_doc},
     {"chord", (PyCFunction) draw_chord, METH_VARARGS, draw_chord_doc},
@@ -1854,6 +1987,82 @@ pen_new(PyObject* self_, PyObject* args, PyObject* kw)
 static void
 pen_dealloc(PenObject* self)
 {
+    PyObject_DEL(self);
+}
+
+/* -------------------------------------------------------------------- */
+
+const char *svg_doc = "Creates a Svg object.\n"
+                      "\n"
+                      "Parameters\n"
+                      "----------\n"
+                      "String : \n"
+                      "    Reference to a filename\n";
+// TBD - overload to svg string
+
+
+static PyObject*
+svg_new(PyObject* self_, PyObject* args, PyObject* kw)
+{
+    SvgObject* self;
+    PyObject* file_or_string;
+
+    if (!PyArg_ParseTuple(args, "O", 
+                          &file_or_string))
+        return NULL;
+
+    char *buf = NULL;
+    PyObject *svg_string = NULL;
+
+    if (PyObject_HasAttrString (file_or_string, "read")) {
+        PyObject *read = PyObject_GetAttrString (file_or_string, "read");
+        if (!PyCallable_Check (read)) {
+          Py_XDECREF(read);
+          PyErr_Format (PyExc_TypeError, "expected file");
+          return NULL;
+        }
+        svg_string = PyObject_CallObject (read, NULL);
+        Py_XDECREF(read);
+    }
+    else if (PyUnicode_Check(file_or_string)) {
+        svg_string = PyUnicode_AsEncodedString(file_or_string, "UTF_8", NULL);
+        if (svg_string == NULL) {
+            PyErr_Format (PyExc_TypeError, "expected an UTF8 encoded string");
+            return NULL;
+        }
+    }
+    else if (PyBytes_Check(file_or_string)) {
+        svg_string = file_or_string;
+        Py_XINCREF(svg_string);
+    }
+    else {
+        PyErr_Format (PyExc_TypeError, "unknown argument to svg_new");
+        return NULL;
+    }
+
+    self = PyObject_NEW(SvgObject, &SvgType);
+    self->path = new agg::svg::path_renderer;
+    agg::svg::parser parser(*self->path);
+    
+    char *bytes = PyBytes_AsString(svg_string);
+    if (bytes==NULL) {
+        PyErr_Format (PyExc_TypeError, "Hell no!");
+        return NULL;
+    }
+        
+
+    parser.parse_string(bytes);
+    if (buf)
+        free(buf);
+    Py_XDECREF(svg_string);
+
+    return (PyObject*) self;
+}
+
+static void
+svg_dealloc(SvgObject* self)
+{
+    delete self->path;
     PyObject_DEL(self);
 }
 
@@ -2565,6 +2774,7 @@ static PyMethodDef aggdraw_functions[] = {
     {"Symbol", (PyCFunction) symbol_new, METH_VARARGS, symbol_doc},
     {"Path", (PyCFunction) path_new, METH_VARARGS, path_doc},
     {"Draw", (PyCFunction) draw_new, METH_VARARGS, draw_doc},
+    {"Svg", (PyCFunction) svg_new, METH_VARARGS, svg_doc},
 #if defined(WIN32)
     {"Dib", (PyCFunction) draw_dib, METH_VARARGS, dib_doc},
 #endif
@@ -2621,6 +2831,7 @@ aggdraw_init(void)
     // PyType_Ready(&FontType);
 
     DrawType.tp_methods = draw_methods;
+    SvgType.tp_methods = svg_methods;
     FontType.tp_methods = font_methods;
     PathType.tp_methods = path_methods;
     
@@ -2675,4 +2886,3 @@ initaggdraw(void)
     aggdraw_init();
 }
 #endif
-

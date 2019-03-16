@@ -168,3 +168,6 @@ ENV/
 # distutils MANIFEST
 MANIFEST
 .pytest_cache
+*~
+vgcor*
+*.png
